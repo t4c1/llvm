@@ -847,7 +847,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // Compute the total savings for the call site.
     auto *CallerBB = CandidateCall.getParent();
     BlockFrequencyInfo *CallerBFI = &(GetBFI(*(CallerBB->getParent())));
-    CycleSavings += getCallsiteCost(this->CandidateCall, DL);
+    CycleSavings += getCallsiteCost(this->CandidateCall, DL, TTI);
     CycleSavings *= *CallerBFI->getBlockProfileCount(CallerBB);
 
     // Remove the cost of the cold basic blocks.
@@ -979,7 +979,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
     // Give out bonuses for the callsite, as the instructions setting them up
     // will be gone after inlining.
-    addCost(-getCallsiteCost(this->CandidateCall, DL));
+    addCost(-getCallsiteCost(this->CandidateCall, DL, TTI));
 
     // If this function uses the coldcc calling convention, prefer not to inline
     // it.
@@ -1208,7 +1208,7 @@ private:
 
   InlineResult onAnalysisStart() override {
     increment(InlineCostFeatureIndex::CallSiteCost,
-              -1 * getCallsiteCost(this->CandidateCall, DL));
+              -1 * getCallsiteCost(this->CandidateCall, DL, TTI));
 
     set(InlineCostFeatureIndex::ColdCcPenalty,
         (F.getCallingConv() == CallingConv::Cold));
@@ -2745,7 +2745,8 @@ static bool functionsHaveCompatibleAttributes(
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
 
-int llvm::getCallsiteCost(CallBase &Call, const DataLayout &DL) {
+int llvm::getCallsiteCost(CallBase &Call, const DataLayout &DL,
+                          const TargetTransformInfo &TTI) {
   int Cost = 0;
   for (unsigned I = 0, E = Call.arg_size(); I != E; ++I) {
     if (Call.isByValArgument(I)) {
@@ -2757,6 +2758,8 @@ int llvm::getCallsiteCost(CallBase &Call, const DataLayout &DL) {
       unsigned PointerSize = DL.getPointerSizeInBits(AS);
       // Ceiling division.
       unsigned NumStores = (TypeSize + PointerSize - 1) / PointerSize;
+
+      Cost += NumStores * TTI.getCallArgumentMemCost();
 
       // If it generates more than 8 stores it is likely to be expanded as an
       // inline memcpy so we take that as an upper bound. Otherwise we assume
@@ -2771,6 +2774,7 @@ int llvm::getCallsiteCost(CallBase &Call, const DataLayout &DL) {
       // For non-byval arguments subtract off one instruction per call
       // argument.
       Cost += InlineConstants::InstrCost;
+      Cost += TTI.getCallArgumentMemCost();
     }
   }
   // The call instruction also disappears after inlining.

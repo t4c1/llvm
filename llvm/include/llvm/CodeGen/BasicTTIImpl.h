@@ -509,6 +509,7 @@ public:
   }
 
   unsigned getInliningThresholdMultiplier() { return 1; }
+  unsigned getCallArgumentMemCost() { return 0; }
   unsigned adjustInliningThreshold(const CallBase *CB) { return 0; }
 
   int getInlinerVectorBonusPercent() { return 150; }

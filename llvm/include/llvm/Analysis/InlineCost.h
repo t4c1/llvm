@@ -244,7 +244,8 @@ InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
 
 /// Return the cost associated with a callsite, including parameter passing
 /// and the call/return instruction.
-int getCallsiteCost(CallBase &Call, const DataLayout &DL);
+int getCallsiteCost(CallBase &Call, const DataLayout &DL,
+                    const TargetTransformInfo &TTI);
 
 /// Get an InlineCost object representing the cost of inlining this
 /// callsite.
