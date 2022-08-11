@@ -604,8 +604,8 @@ public:
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
-                                   const LoopAccessInfo *LAI) {
-    return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
+                                   LoopVectorizationLegality *LVL) {
+    return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL);
   }
 
   PredicationStyle emitGetActiveLaneMask() {
@@ -682,6 +682,10 @@ public:
 
   virtual bool enableWritePrefetching() const {
     return getST()->enableWritePrefetching();
+  }
+
+  virtual bool shouldPrefetchAddressSpace(unsigned AS) const {
+    return getST()->shouldPrefetchAddressSpace(AS);
   }
 
   /// @}
